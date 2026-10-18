@@ -180,7 +180,7 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
         borrowedTo: String(f.get('borrowedTo') || '').trim()
       });
       state.transactions.push(...entries);
-      state.selectedMonth = monthOf(entries[0].date);
+      state.selectedMonth = currentMonth();
     } else {
       const accountId = defaultAccountId;
       state.transactions.push({
