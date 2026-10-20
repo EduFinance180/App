@@ -96,7 +96,7 @@ function transactionHTML(t) {
 function groupedTransactions(limit, list = null) {
   const source = list || inMonth();
   const groups = {};
-  [...source]
+  [...source].reverse()
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, limit || 999)
     .forEach(t => (groups[t.date] ??= []).push(t));
@@ -129,7 +129,7 @@ function home() {
   const monthName = monthDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
   const monthYear = monthDate.toLocaleDateString('pt-BR', { year: 'numeric' });
   const grouped = {};
-  movements.sort((a, b) => b.date.localeCompare(a.date)).forEach(tx => (grouped[tx.date] ??= []).push(tx));
+  [...movements].reverse().sort((a, b) => b.date.localeCompare(a.date)).forEach(tx => (grouped[tx.date] ??= []).push(tx));
   const transactions = Object.entries(grouped).map(([date, list]) => {
     const dayTotals = totals(list);
     dayTotals.expense += list.filter(tx => tx.type === 'invoice_payment').reduce((sum, tx) => sum + Number(tx.amount), 0);

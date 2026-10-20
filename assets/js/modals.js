@@ -5,6 +5,7 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
   /* ── estado interno ───────────────────────────────────────────── */
   let type         = initialType;
   let selected     = selectableCategories(initialType).find(c => c.name === selectedCategoryName) || selectableCategories(initialType)[0];
+  let categoryQuery = '';
   let payment      = 'account';
   let installments = 1;
 
@@ -40,6 +41,10 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
 
       <!-- categoria primeiro -->
       <label class="field"><span>Categoria</span>
+        <div class="category-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg>
+          <input type="search" id="_ms_category_search" placeholder="Buscar categoria" aria-label="Buscar categoria">
+        </div>
         <div class="categories" id="_ms_cats"></div>
       </label>
       <div class="category-guidance"><span>Tem dúvidas sobre qual categoria escolher?</span><button type="button" id="browseCategoriesFromLaunch">Clique aqui</button></div>
@@ -117,9 +122,11 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
     if (!cats.some(c => c.name === selected?.name)) selected = cats[0];
     const catGrid = $('#_ms_cats');
     if (catGrid) {
-      catGrid.innerHTML = cats.map(c =>
+      const query = categoryQuery.trim().toLocaleLowerCase('pt-BR');
+      const visibleCats = query ? cats.filter(c => c.name.toLocaleLowerCase('pt-BR').includes(query)) : cats;
+      catGrid.innerHTML = visibleCats.length ? visibleCats.map(c =>
         `<button type="button" class="cat-choice${selected.name === c.name ? ' selected' : ''}" data-cat="${escapeHtml(c.name)}" data-icon="${escapeHtml(c.icon)}">${escapeHtml(c.icon)} ${escapeHtml(c.name)}</button>`
-      ).join('');
+      ).join('') : '<span class="category-search-empty">Nenhuma categoria encontrada.</span>';
       catGrid.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
         selected = { name: b.dataset.cat, icon: b.dataset.icon };
         catGrid.querySelectorAll('[data-cat]').forEach(x => x.classList.toggle('selected', x === b));
@@ -134,6 +141,11 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
     selected = selectableCategories(type)[0];
     updateView();
   }));
+
+  $('#_ms_category_search').addEventListener('input', e => {
+    categoryQuery = e.target.value;
+    updateView();
+  });
 
   root.querySelector('#addCategoryFromLaunch').addEventListener('click', () => categoryModal(type, null, name => modal(type, name)));
   root.querySelector('#browseCategoriesFromLaunch').addEventListener('click', () => {
