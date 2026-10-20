@@ -38,7 +38,13 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
         <button type="button" data-type="income">Receita</button>
       </div>
 
-      <!-- valor -->
+      <!-- categoria primeiro -->
+      <label class="field"><span>Categoria</span>
+        <div class="categories" id="_ms_cats"></div>
+      </label>
+      <div class="category-guidance"><span>Tem dúvidas sobre qual categoria escolher?</span><button type="button" id="browseCategoriesFromLaunch">Clique aqui</button></div>
+
+      <!-- valor depois da categoria -->
       <input class="amount-input" name="amount" inputmode="decimal" placeholder="R$ 0,00" data-money required>
 
       <!-- forma de pagamento (só aparece em despesa com cartão) -->
@@ -53,11 +59,6 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
 
       <!-- seção: despesa / receita -->
       <div id="_ms_normal">
-        <label class="field"><span>Categoria</span>
-          <div class="categories" id="_ms_cats"></div>
-        </label>
-        <div class="category-guidance"><span>Tem dúvidas sobre qual categoria escolher?</span><button type="button" id="browseCategoriesFromLaunch">Clique aqui</button></div>
-
         <!-- cartão + parcelas (name="cardId" para não conflitar com accountId) -->
         <div id="_ms_credit">
           <label class="field"><span>Cartão</span>
