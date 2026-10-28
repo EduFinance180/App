@@ -977,7 +977,7 @@ body[data-app-locked="true"] .app-shell { min-height: 100dvh; padding-bottom: 0;
   width: min(100%, 480px);
   border-radius: var(--radius-xl);
   padding: 20px;
-  animation: modal-up 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: modal-up 0.18s ease-out;
   max-height: 92vh;
   max-height: 92dvh;
   max-height: min(92dvh, calc(var(--visual-viewport-height, 100dvh) - 24px));
@@ -1004,8 +1004,8 @@ body[data-app-locked="true"] .app-shell { min-height: 100dvh; padding-bottom: 0;
 .modal-close:active { background: var(--line); }
 
 @keyframes modal-up {
-  from { transform: translateY(16px); }
-  to   { transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .handle {
@@ -1014,6 +1014,20 @@ body[data-app-locked="true"] .app-shell { min-height: 100dvh; padding-bottom: 0;
   background: var(--line);
   border-radius: 9px;
   margin: 0 auto 18px;
+}
+
+/* Tela dedicada de criação de lançamento */
+.launch-page { min-height: 100dvh; padding: max(16px, env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); background: var(--bg); }
+.launch-header { display:flex; align-items:center; gap:12px; max-width:680px; margin:0 auto 18px; }
+.launch-header h1 { margin:0; font:700 1.25rem "Plus Jakarta Sans",sans-serif; }
+.launch-back { width:40px; height:40px; border:0; border-radius:13px; background:var(--card); color:var(--ink); font-size:1.8rem; cursor:pointer; }
+.launch-form { width:min(100%,680px); margin:0 auto; padding:20px; border-radius:var(--radius-xl); background:var(--card); box-shadow:var(--shadow, 0 10px 35px rgba(15,23,42,.08)); }
+body[data-app-page="launch"] .add-button { display:none; }
+@media (max-width: 959px) {
+  body[data-app-page="launch"] .bottom-nav { display:none; }
+}
+@media (min-width: 960px) {
+  body[data-app-page="launch"] .launch-page { min-height: calc(100dvh - 76px); }
 }
 
 .modal-title {
@@ -2292,18 +2306,16 @@ body[data-app-locked="true"] .app-shell { min-height: 100dvh; padding-bottom: 0;
     color: var(--blue-300);
   }
   #modalRoot #_msBd #_msForm {
-    animation: new-transaction-desktop-in .32s cubic-bezier(.2, .85, .25, 1) both;
-    transform-origin: center;
+    animation: new-transaction-desktop-in .18s ease-out both;
   }
 }
 
 @keyframes desktop-modal-in {
-  from { opacity: 0; transform: translateY(8px) scale(.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes new-transaction-desktop-in {
-  from { opacity: 0; transform: translateY(18px) scale(.96); }
-  70% { opacity: 1; transform: translateY(-2px) scale(1.005); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

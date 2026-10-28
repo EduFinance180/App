@@ -1,0 +1,35 @@
+{
+  "version": 7,
+  "theme": "default",
+  "colorMode": "light",
+  "fontScale": 1,
+  "hideHomeCards": false,
+  "homeBalanceMode": "month",
+  "selectedMonth": "2026-10",
+  "budget": 0,
+  "categoryBudgets": {},
+  "incomeCategoryBudgets": {},
+  "categories": { "expense": [], "income": [] },
+  "accounts": [
+    { "id": "bank", "name": "Conta principal", "icon": "🏦", "initialBalance": 1250, "kind": "bank" }
+  ],
+  "transactions": [
+    { "id": "demo-202609-01", "type": "income", "amount": 5200, "date": "2026-09-05", "note": "Salário", "category": "Salário", "icon": "💼", "accountId": "bank" },
+    { "id": "demo-202609-02", "type": "expense", "amount": 1450, "date": "2026-09-06", "note": "Aluguel", "category": "Moradia", "icon": "🏠", "accountId": "bank" },
+    { "id": "demo-202609-03", "type": "expense", "amount": 638.42, "date": "2026-09-08", "note": "Compras do mês", "category": "Alimentação", "icon": "🍽️", "accountId": "bank" },
+    { "id": "demo-202609-04", "type": "expense", "amount": 180, "date": "2026-09-10", "note": "Transporte", "category": "Transporte", "icon": "🚕", "accountId": "bank" },
+    { "id": "demo-202609-05", "type": "expense", "amount": 119.9, "date": "2026-09-12", "note": "Internet residencial", "category": "Moradia", "icon": "🏠", "accountId": "bank" },
+    { "id": "demo-202609-06", "type": "expense", "amount": 86.5, "date": "2026-09-15", "note": "Farmácia", "category": "Saúde", "icon": "🩺", "accountId": "bank" },
+    { "id": "demo-202609-07", "type": "expense", "amount": 142, "date": "2026-09-20", "note": "Jantar de fim de semana", "category": "Alimentação", "icon": "🍽️", "accountId": "bank" },
+    { "id": "demo-202609-08", "type": "expense", "amount": 95, "date": "2026-09-25", "note": "Cinema e lanche", "category": "Lazer", "icon": "🎉", "accountId": "bank" },
+    { "id": "demo-202610-01", "type": "income", "amount": 5200, "date": "2026-10-05", "note": "Salário", "category": "Salário", "icon": "💼", "accountId": "bank" },
+    { "id": "demo-202610-02", "type": "expense", "amount": 1450, "date": "2026-10-06", "note": "Aluguel", "category": "Moradia", "icon": "🏠", "accountId": "bank" },
+    { "id": "demo-202610-03", "type": "expense", "amount": 712.8, "date": "2026-10-08", "note": "Compras do mês", "category": "Alimentação", "icon": "🍽️", "accountId": "bank" },
+    { "id": "demo-202610-04", "type": "expense", "amount": 195, "date": "2026-10-10", "note": "Transporte", "category": "Transporte", "icon": "🚕", "accountId": "bank" },
+    { "id": "demo-202610-05", "type": "expense", "amount": 119.9, "date": "2026-10-12", "note": "Internet residencial", "category": "Moradia", "icon": "🏠", "accountId": "bank" },
+    { "id": "demo-202610-06", "type": "expense", "amount": 230, "date": "2026-10-14", "note": "Consulta e exames", "category": "Saúde", "icon": "🩺", "accountId": "bank" },
+    { "id": "demo-202610-07", "type": "expense", "amount": 168.7, "date": "2026-10-19", "note": "Almoço com amigos", "category": "Alimentação", "icon": "🍽️", "accountId": "bank" },
+    { "id": "demo-202610-08", "type": "expense", "amount": 125, "date": "2026-10-23", "note": "Passeio no fim de semana", "category": "Lazer", "icon": "🎉", "accountId": "bank" }
+  ],
+  "recurring": []
+}
