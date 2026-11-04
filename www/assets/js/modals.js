@@ -2,6 +2,7 @@
 /* ==== MODAIS ==== */
 
 function modal(initialType = 'expense', selectedCategoryName = '') {
+  const isLaunchPage = page === 'launch';
   /* ── estado interno ───────────────────────────────────────────── */
   let type         = initialType;
   let selected     = selectableCategories(initialType).find(c => c.name === selectedCategoryName) || selectableCategories(initialType)[0];
@@ -9,7 +10,7 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
   let payment      = 'account';
   let installments = 1;
 
-  const root      = document.getElementById('modalRoot');
+  const root      = document.getElementById(isLaunchPage ? 'screen' : 'modalRoot');
   const cards     = state.accounts.filter(isCredit);
   const nonCredit = state.accounts.filter(a => !isCredit(a));
   const defaultAccountId = nonCredit[0]?.id || 'bank';
@@ -27,11 +28,17 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
   const show = (sel, v) => { const el = $(sel); if (el) el.style.display = v ? '' : 'none'; };
 
   /* ── monta o HTML UMA ÚNICA VEZ ──────────────────────────────── */
-  root.innerHTML = `
+  root.innerHTML = isLaunchPage ? `
+  <section class="launch-page">
+    <header class="launch-header"><button type="button" class="launch-back" id="cancelLaunch" aria-label="Voltar">‹</button><h1>Novo lançamento</h1></header>
+    <form class="launch-form" id="_msForm"></form>
+  </section>` : `
   <div class="modal-backdrop" id="_msBd">
-    <form class="modal" id="_msForm">
+    <form class="modal" id="_msForm"></form>
+  </div>`;
+  root.querySelector('#_msForm').insertAdjacentHTML('afterbegin', `
       <div class="handle"></div>
-      <h2 class="modal-title">Novo lançamento</h2>
+      ${isLaunchPage ? '' : '<h2 class="modal-title">Novo lançamento</h2>'}
 
       <!-- tipo -->
       <div class="type-switch">
@@ -77,7 +84,6 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
             </select>
           </label>
           <label class="field"><span>Data do primeiro vencimento</span><input name="firstDueDate" id="_ms_first_due" type="date" value="${cards.length ? defaultFirstDueDate(cards[0]) : today()}" required></label>
-          <label class="field"><span>Cartão emprestado para (opcional)</span><input name="borrowedTo" maxlength="80" placeholder="Ex.: minha irmã"></label>
         </div>
 
         <!-- repetir todo mês -->
@@ -97,8 +103,7 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
       </label>
       <button class="save">Salvar lançamento</button>
       <button type="button" class="add-category-from-launch" id="addCategoryFromLaunch">Adicionar nova categoria</button>
-    </form>
-  </div>`;
+  `);
 
   /* ── atualiza APENAS classes e display — sem recriar backdrop ── */
   function updateView() {
@@ -115,15 +120,23 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
     show('#_ms_normal',   true);
     show('#_ms_credit',   isCreditPay);
     show('#_ms_acct',     !isCreditPay);
-    show('#_ms_repeat',   !isCreditPay);
+    show('#_ms_repeat',   type === 'expense');
+    const repeatLabel = $('#_ms_repeat span');
+    if (repeatLabel) repeatLabel.textContent = isCreditPay ? 'Repetir todo mês no cartão (compra à vista)' : 'Repetir todo mês';
+    const installmentSelect = $('[name=installments]');
+    if (installmentSelect) {
+      if (isCreditPay && $('[name=repeat]').checked && installmentSelect.value !== '1') installmentSelect.value = '1';
+      installmentSelect.disabled = isCreditPay && $('[name=repeat]').checked;
+      installments = Number(installmentSelect.value) || 1;
+    }
 
     /* recria apenas o interior do grid de categorias */
     const cats    = selectableCategories(type, selected?.name || '');
     if (!cats.some(c => c.name === selected?.name)) selected = cats[0];
     const catGrid = $('#_ms_cats');
     if (catGrid) {
-      const query = categoryQuery.trim().toLocaleLowerCase('pt-BR');
-      const visibleCats = query ? cats.filter(c => c.name.toLocaleLowerCase('pt-BR').includes(query)) : cats;
+      const query = normalizeSearchText(categoryQuery.trim());
+      const visibleCats = query ? cats.filter(c => normalizeSearchText(c.name).includes(query)) : cats;
       catGrid.innerHTML = visibleCats.length ? visibleCats.map(c =>
         `<button type="button" class="cat-choice${selected.name === c.name ? ' selected' : ''}" data-cat="${escapeHtml(c.name)}" data-icon="${escapeHtml(c.icon)}">${escapeHtml(c.icon)} ${escapeHtml(c.name)}</button>`
       ).join('') : '<span class="category-search-empty">Nenhuma categoria encontrada.</span>';
@@ -170,10 +183,10 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
   $('[name=installments]').addEventListener('change', e => {
     installments = Number(e.target.value);
   });
+  $('[name=repeat]').addEventListener('change', updateView);
 
-  $('#_msBd').addEventListener('click', e => {
-    if (e.target === e.currentTarget) root.innerHTML = '';
-  });
+  if (isLaunchPage) root.querySelector('#cancelLaunch').addEventListener('click', () => { page = 'home'; render(); });
+  else $('#_msBd').addEventListener('click', e => { if (e.target === e.currentTarget) root.innerHTML = ''; });
 
   $('#_msForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -187,11 +200,27 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
       const n       = Number(f.get('installments')) || 1;
       const firstDueDate = f.get('firstDueDate');
       if (!firstDueDate || firstDueDate < date) return toast('O primeiro vencimento não pode ser anterior à compra.');
-      const entries = buildInstallments({
-        account: card, category: selected.name, icon: selected.icon,
-        note: f.get('note'), total: amount, date, installments: n, firstDueDate,
-        borrowedTo: String(f.get('borrowedTo') || '').trim()
-      });
+      let entries;
+      if (f.get('repeat')) {
+        const recurringId = makeId();
+        entries = [{
+          id: makeId(), type: 'expense', category: selected.name, icon: selected.icon,
+          accountId: card.id, amount, date: firstDueDate, invoiceMonth: monthOf(firstDueDate),
+          note: f.get('note'), recurringId
+        }];
+        state.recurring.push({
+          id: recurringId, type: 'expense', category: selected.name, icon: selected.icon,
+          accountId: card.id, amount, day: Number(firstDueDate.slice(8, 10)),
+          note: f.get('note'), startMonth: monthOf(firstDueDate),
+          lastGenerated: monthOf(firstDueDate), active: true
+        });
+      } else {
+        entries = buildInstallments({
+          account: card, category: selected.name, icon: selected.icon,
+          note: f.get('note'), total: amount, date, installments: n, firstDueDate,
+          borrowedTo: String(f.get('borrowedTo') || '').trim()
+        });
+      }
       state.transactions.push(...entries);
       state.selectedMonth = currentMonth();
     } else {
@@ -215,6 +244,7 @@ function modal(initialType = 'expense', selectedCategoryName = '') {
 
     persist();
     if (navigator.vibrate) navigator.vibrate([8, 30, 8]);
+    if (isLaunchPage) page = 'home';
     root.innerHTML = '';
     render();
     toast(payment === 'credit' && type === 'expense' && installments > 1
@@ -327,12 +357,18 @@ function editTransactionModal(txId) {
     e.preventDefault();
     const f      = new FormData(e.target);
     const amount = parseMoney(f.get('amount'));
+    const date   = f.get('date');
     if (!amount) return toast('Informe um valor válido.');
+    const nextAccountId = f.get('accountId');
+    const nextAccount = state.accounts.find(a => a.id === nextAccountId);
     Object.assign(tx, {
       type, amount,
       category: selected.name, icon: selected.icon,
-      accountId: f.get('accountId'),
-      note: f.get('note'), date: f.get('date')
+      accountId: nextAccountId,
+      note: f.get('note'), date,
+      ...(isCredit(nextAccount) && (tx.installment || tx.invoiceMonth)
+        ? { invoiceMonth: monthOf(date) }
+        : {})
     });
     persist();
     if (navigator.vibrate) navigator.vibrate(8);
@@ -421,14 +457,14 @@ function searchModal() {
   const count   = root.querySelector('#searchCount');
 
   function doSearch() {
-    const q = input.value.trim().toLowerCase();
+    const q = normalizeSearchText(input.value.trim());
     if (!q) {
       count.textContent  = '';
       results.innerHTML  = '<div class="empty">Digite para buscar...</div>';
       return;
     }
     const found = state.transactions.filter(t => {
-      const hay = `${t.category || ''} ${t.note || ''} ${t.amount} ${accountName(t.accountId)}`.toLowerCase();
+      const hay = normalizeSearchText(`${t.category || ''} ${t.note || ''} ${t.amount} ${accountName(t.accountId)}`);
       return hay.includes(q);
     }).sort((a, b) => b.date.localeCompare(a.date));
 
@@ -658,10 +694,7 @@ function categoryModal(initialType = 'expense', editIndex = null, onCreated = nu
           item.icon = category.icon;
         }
       });
-      if (previousName !== name && Object.prototype.hasOwnProperty.call(state.categoryBudgets, previousName)) {
-        state.categoryBudgets[name] = state.categoryBudgets[previousName];
-        delete state.categoryBudgets[previousName];
-      }
+      renameCategoryBudgets(type, previousName, name);
     } else {
       state.categories[type].push({ name, icon: icon || '🏷️', hidden: false, suggestions: customSuggestions.map(([text]) => text) });
     }
@@ -787,7 +820,7 @@ function accountModal(existingId = null) {
 }
 
 function categoryBudgetModal(catName = '', type = 'expense') {
-  const budgetMap = type === 'income' ? state.incomeCategoryBudgets : state.categoryBudgets;
+  const budgetMap = categoryBudgetMap(type, state.selectedMonth, true);
   if (!catName) {
     const available = selectableCategories(type).filter(c => !Object.prototype.hasOwnProperty.call(budgetMap, c.name));
     if (!available.length) return toast('Não há outras categorias disponíveis para criar uma meta.');

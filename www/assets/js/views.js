@@ -82,7 +82,7 @@ function transactionHTML(t) {
   const instBadge = t.installment ? `<span class="badge-installment">${t.installment.current}/${t.installment.total}</span>` : '';
   const cardBadge = isCardTx ? `<span class="badge-card">💳</span>` : '';
 
-  return `<article class="transaction" data-tx-id="${escapeHtml(t.id)}">
+  return `<article class="transaction" data-tx-id="${escapeHtml(t.id)}" title="Segure por um instante para editar">
     <div class="category-icon">${escapeHtml(t.icon || '↔️')}</div>
     <div class="transaction-info">
       <div class="transaction-name">${escapeHtml(t.category || 'Transferência')}${instBadge}${cardBadge}</div>
@@ -331,7 +331,7 @@ function categoryDetail() {
       <div class="category-detail-entries">
         ${sortedEntries.length ? sortedEntries.map(t => {
           const share = total ? Number(t.amount) / total * 100 : 0;
-          return `<article class="category-detail-entry" data-tx-id="${escapeHtml(t.id)}">
+          return `<article class="category-detail-entry" data-tx-id="${escapeHtml(t.id)}" title="Segure por um instante para editar">
             <span class="category-detail-entry-icon">${escapeHtml(t.icon || category?.icon || '🏷️')}</span>
             <div class="category-detail-entry-info">
               <strong>${escapeHtml(t.note || t.category || selectedCategoryName)}</strong>
@@ -348,8 +348,40 @@ function categoryDetail() {
 
 function budget() {
   const type = budgetType;
+  if (type === 'comparison') {
+    const transactions = inMonth();
+    const income = transactions.filter(tx => tx.type === 'income').reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const expenses = transactions.filter(tx => tx.type === 'expense').reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const balance = income - expenses;
+    const scale = Math.max(income, expenses, 1);
+    return `<header class="top">
+      <div class="topbar">${monthChanger()}</div>
+      <div class="balance-label">Comparativo de receitas e despesas</div>
+      <div class="balance" style="font-size:1.375rem;color:${balance >= 0 ? 'var(--income)' : 'var(--expense)'}">${balance >= 0 ? 'Sobrou ' : 'Faltou '}${money(Math.abs(balance))}</div>
+    </header>
+    <div class="content">
+      <div class="budget-type-switch" role="group" aria-label="Visão do orçamento">
+        <button type="button" data-budget-type="expense">Despesas</button>
+        <button type="button" data-budget-type="income">Receitas</button>
+        <button type="button" data-budget-type="comparison" class="active" aria-pressed="true">Comparativo</button>
+      </div>
+      <h2 class="section-title">${monthLabel(state.selectedMonth)}</h2>
+      <div class="panel budget-comparison">
+        <div class="budget-comparison-item">
+          <div class="row"><strong>Receitas</strong><b class="income-value">${money(income)}</b></div>
+          <div class="budget-progress income-goal"><i style="width:${income / scale * 100}%"></i></div>
+        </div>
+        <div class="budget-comparison-item">
+          <div class="row"><strong>Despesas</strong><b class="expense-value">${money(expenses)}</b></div>
+          <div class="budget-progress danger"><i style="width:${expenses / scale * 100}%"></i></div>
+        </div>
+        <div class="row budget-comparison-balance"><strong>Saldo do mês</strong><b style="color:${balance >= 0 ? 'var(--income)' : 'var(--expense)'}">${money(balance)}</b></div>
+      </div>
+      <p class="budget-comparison-note">Comparação dos lançamentos registrados em ${monthLabel(state.selectedMonth)}.</p>
+    </div>`;
+  }
   const isIncome = type === 'income';
-  const budgetMap = isIncome ? state.incomeCategoryBudgets : state.categoryBudgets;
+  const budgetMap = categoryBudgetMap(type);
   const actualLabel = isIncome ? 'recebido' : 'utilizado';
   const categories = state.categories[type] || [];
   const byCategory = {};
@@ -379,6 +411,7 @@ function budget() {
     <div class="budget-type-switch" role="group" aria-label="Tipo de orçamento">
       <button type="button" data-budget-type="expense" class="${!isIncome ? 'active' : ''}" aria-pressed="${!isIncome}">Despesas</button>
       <button type="button" data-budget-type="income" class="${isIncome ? 'active' : ''}" aria-pressed="${isIncome}">Receitas</button>
+      <button type="button" data-budget-type="comparison">Comparativo</button>
     </div>
     <h2 class="section-title">${isIncome ? 'Sua meta de receitas' : 'Seu orçamento'}</h2>
     <div class="panel">
@@ -759,6 +792,13 @@ function cardInvoicePage() {
   const card = state.accounts.find(account => account.id === selectedCardId && isCredit(account));
   if (!card) return `<header class="top"><div class="topbar"><button class="icon-btn" data-go="accounts" aria-label="Voltar">‹</button><span class="period">Fatura</span><span></span></div></header><div class="content"><div class="empty">Cartão não encontrado.</div></div>`;
   const purchases = creditInvoice(card, state.selectedMonth).sort((a, b) => a.date.localeCompare(b.date));
+  const categoryTotals = Object.values(purchases.reduce((totals, tx) => {
+    const category = tx.category || 'Compra';
+    if (!totals[category]) totals[category] = { category, amount: 0, count: 0 };
+    totals[category].amount += Number(tx.amount || 0);
+    totals[category].count += 1;
+    return totals;
+  }, {})).sort((a, b) => b.amount - a.amount);
   const total = creditInvoiceTotal(card, state.selectedMonth);
   const paid = invoicePaidTotal(card, state.selectedMonth);
   const remaining = invoiceRemaining(card, state.selectedMonth);
@@ -779,6 +819,10 @@ function cardInvoicePage() {
       <div class="row"><strong>Falta pagar</strong><strong class="card-invoice-remaining">${money(remaining)}</strong></div>
       ${remaining > 0 ? `<button class="save" data-pay-invoice="${escapeHtml(card.id)}" data-invoice-month="${state.selectedMonth}" data-invoice-amount="${remaining}">Pagar ${money(remaining)}</button>` : total > 0 ? '<div class="card-invoice-paid-message">✓ Fatura paga</div>' : ''}
     </div>
+    <h2 class="section-title">Total por categoria</h2>
+    ${categoryTotals.length ? `<div class="panel card-invoice-categories">${categoryTotals.map(item => `
+      <div class="row"><span>${escapeHtml(item.category)} <small>${item.count} ${item.count === 1 ? 'compra' : 'compras'}</small></span><b>${money(item.amount)}</b></div>
+    `).join('')}</div>` : '<div class="empty"><b>Sem gastos por categoria</b>Quando houver compras nesta fatura, os totais aparecerão aqui.</div>'}
     <h2 class="section-title">Compras nesta fatura <span class="card-invoice-count">${purchases.length}</span></h2>
     ${purchases.length ? `<div class="setting-list">${purchases.map(tx => {
       const installmentLabel = tx.installment ? `${tx.installment.current}/${tx.installment.total} parcelas` : 'Compra à vista';
@@ -787,6 +831,10 @@ function cardInvoicePage() {
         <span class="s-icon">${escapeHtml(tx.icon || card.icon)}</span>
         <span class="card-invoice-purchase-info"><strong>${escapeHtml(tx.category || 'Compra')}</strong><small>${escapeHtml(description || installmentLabel)} · ${installmentLabel} · vence ${dateFull(tx.date)}</small></span>
         <b>${money(tx.amount)}</b>
+        <div class="card-invoice-actions">
+          <button type="button" class="modal-secondary" data-invoice-edit="${escapeHtml(tx.id)}">Editar</button>
+          <button type="button" class="modal-secondary" data-invoice-delete="${escapeHtml(tx.id)}">Excluir</button>
+        </div>
       </article>`;
     }).join('')}</div>` : '<div class="empty"><b>Nenhuma compra nesta fatura</b>As parcelas futuras aparecerão aqui quando você mudar o mês.</div>'}
   </div>`;
@@ -810,6 +858,7 @@ function invoicesPage() {
     ${cards.length ? cards.map(c => {
       const invoice   = creditInvoiceTotal(c, state.selectedMonth);
       const used      = creditUsed(c);
+      const available = Number(c.limit || 0) - used;
       const remaining = invoiceRemaining(c, state.selectedMonth);
       return `
       <div class="panel" style="margin-bottom:14px">
@@ -826,6 +875,10 @@ function invoicesPage() {
             <small style="color:var(--muted);font-size: 0.6875rem">Limite comprometido</small>
             <div class="stat-number" style="margin:4px 0">${money(used)}</div>
           </div>
+        </div>
+        <div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">
+          <span>Limite disponível</span>
+          <strong style="color:${available < 0 ? 'var(--expense)' : 'var(--income)'}">${money(available)}</strong>
         </div>
         ${remaining > 0
           ? `<button class="save" data-pay-invoice="${escapeHtml(c.id)}" data-invoice-month="${state.selectedMonth}" data-invoice-amount="${remaining}">💸 Pagar ${money(remaining)} · ${monthLabel(state.selectedMonth)}</button>`
@@ -987,6 +1040,7 @@ function render() {
   if (page !== 'lock') applyRecurring();
   const screens = {
     home, stats, categoryDetail, budget, settings, privacy: privacyPage, lock: lockScreen, themes: themesPage, fontSizePage, accounts,
+    launch: () => '',
     cardDetail: cardDetailPage,
     cardInvoice: cardInvoicePage,
     balanceDisplay: balanceDisplayPage,
@@ -1006,6 +1060,7 @@ function render() {
   screen.innerHTML = html;
   screen.style.animation = '';
   document.body.dataset.appLocked = page === 'lock' && Boolean(state.pinLock?.enabled) ? 'true' : 'false';
+  document.body.dataset.appPage = page;
   maskVisibleAmounts(screen);
 
   if (window._recurringGenerated) {
